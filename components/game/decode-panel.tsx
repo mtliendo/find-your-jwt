@@ -1,9 +1,18 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { InspectedToken } from "@/lib/game-types";
 import { readClaim } from "@/lib/jwt";
 
-export function DecodePanel({ inspected }: { inspected: InspectedToken | null }) {
+export function DecodePanel({
+  inspected,
+  onClaim,
+  claiming = false,
+}: {
+  inspected: InspectedToken | null;
+  onClaim?: () => void;
+  claiming?: boolean;
+}) {
   if (!inspected) {
     return (
       <Card className="border-white/5 bg-stone-950/80">
@@ -11,8 +20,8 @@ export function DecodePanel({ inspected }: { inspected: InspectedToken | null })
           <CardTitle className="text-sm">Inspect</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          Hover a token with the magnifying glass to decode it. Decoding is not
-          the win.
+          Tap a chip to decode it, or press E to inspect the nearest one.
+          Decoding is not the win.
         </CardContent>
       </Card>
     );
@@ -46,10 +55,21 @@ export function DecodePanel({ inspected }: { inspected: InspectedToken | null })
             {decoded.payloadText || "—"}
           </pre>
         </div>
-        <p className="text-xs text-muted-foreground">
-          <span className="text-stone-300">sub:</span> {sub ?? "missing"} · Click
-          to claim. Win only if this subject is you.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            <span className="text-stone-300">sub:</span> {sub ?? "missing"} ·
+            Decode is free. Claim only if this subject is you.
+          </p>
+          <Button
+            type="button"
+            variant="amber"
+            size="sm"
+            disabled={claiming}
+            onClick={onClaim}
+          >
+            Claim this token
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

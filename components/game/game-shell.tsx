@@ -40,25 +40,32 @@ export function GameShell({
     null,
   );
   const [canvasKey, setCanvasKey] = useState(0);
+  const [claiming, setClaiming] = useState(false);
 
   const onInspect = useCallback((value: InspectedToken | null) => {
     setInspected(value);
   }, []);
 
   const onClaim = useCallback(async (token: HaystackToken) => {
-    const result = await claimTokenAction(token.raw);
-    if (result.ok) {
-      setWin(result);
-      setFail(null);
-      return;
+    if (claiming) return;
+    setClaiming(true);
+    try {
+      const result = await claimTokenAction(token.raw);
+      if (result.ok) {
+        setWin(result);
+        setFail(null);
+        return;
+      }
+      setFail(result.reason);
+      setFailTokenId(token.id);
+      window.setTimeout(() => {
+        setFail(null);
+        setFailTokenId(null);
+      }, 1600);
+    } finally {
+      setClaiming(false);
     }
-    setFail(result.reason);
-    setFailTokenId(token.id);
-    window.setTimeout(() => {
-      setFail(null);
-      setFailTokenId(null);
-    }, 1600);
-  }, []);
+  }, [claiming]);
 
   const replay = () => {
     setWin(null);
@@ -88,8 +95,10 @@ export function GameShell({
       </header>
 
       <p className="text-sm text-stone-300">
-        WASD or arrows to walk. Magnifying glass to inspect. Click to claim.
-        Decode is free — identity is the <code className="text-amber-200">sub</code>.
+        WASD or arrows to walk. Tap a chip to decode (stays selected). Claim
+        with the HUD button, a second tap, or Enter / Space. E inspects the
+        nearest chip. Decode is free — identity is the{" "}
+        <code className="text-amber-200">sub</code>.
       </p>
 
       <div className="relative">
@@ -109,7 +118,11 @@ export function GameShell({
         </div>
       ) : null}
 
-      <DecodePanel inspected={inspected} />
+      <DecodePanel
+        inspected={inspected}
+        claiming={claiming}
+        onClaim={inspected ? () => onClaim(inspected.token) : undefined}
+      />
     </main>
   );
 }

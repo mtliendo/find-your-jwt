@@ -32,6 +32,10 @@ export class OfficeScene extends Phaser.Scene {
   private tokens = new Map<string, Phaser.GameObjects.Sprite>();
   private inspectedId: string | null = null;
   private failUntil = 0;
+  private inspectKey!: Phaser.Input.Keyboard.Key;
+  private inspectAltKey!: Phaser.Input.Keyboard.Key;
+  private enterKey!: Phaser.Input.Keyboard.Key;
+  private spaceKey!: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super({ key: "OfficeScene" });
@@ -146,6 +150,22 @@ export class OfficeScene extends Phaser.Scene {
       left: "A",
       right: "D",
     }) as DirectionKeys;
+    this.inspectKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.E,
+    );
+    this.inspectAltKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.I,
+    );
+    this.enterKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ENTER,
+    );
+    this.spaceKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+    );
+    this.input.keyboard.addCapture([
+      Phaser.Input.Keyboard.KeyCodes.SPACE,
+      Phaser.Input.Keyboard.KeyCodes.ENTER,
+    ]);
 
     this.input.setDefaultCursor("none");
   }
@@ -176,9 +196,7 @@ export class OfficeScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
 
-      sprite.on("pointerover", () => this.inspect(token, sprite));
-      sprite.on("pointerout", () => this.clearInspect(token.id));
-      sprite.on("pointerdown", () => this.claim(token, sprite));
+      sprite.on("pointerdown", () => this.handleChipPointerDown(token, sprite));
       this.tokens.set(token.id, sprite);
     }
   }
@@ -192,22 +210,59 @@ export class OfficeScene extends Phaser.Scene {
     this.magGlass.setDepth(40);
   }
 
-  private inspect(token: HaystackToken, sprite: Phaser.GameObjects.Sprite) {
+  private handleChipPointerDown(
+    token: HaystackToken,
+    sprite: Phaser.GameObjects.Sprite,
+  ) {
+    if (this.inspectedId === token.id) {
+      this.claim(token, sprite);
+      return;
+    }
+    this.selectInspect(token, sprite);
+  }
+
+  private selectInspect(token: HaystackToken, sprite: Phaser.GameObjects.Sprite) {
+    if (this.inspectedId && this.inspectedId !== token.id) {
+      this.unhighlight(this.inspectedId);
+    }
     this.inspectedId = token.id;
     sprite.setTint(0xfff1b8);
     sprite.setScale(TOKEN_SCALE * 1.25);
     this.bridge().onInspect({ token, decoded: decodeJwt(token.raw) });
   }
 
-  private clearInspect(id: string) {
-    if (this.inspectedId !== id) return;
-    this.inspectedId = null;
+  private unhighlight(id: string) {
     const sprite = this.tokens.get(id);
-    if (sprite && this.time.now >= this.failUntil) {
-      sprite.clearTint();
-      sprite.setScale(TOKEN_SCALE);
+    if (!sprite || this.time.now < this.failUntil) return;
+    sprite.clearTint();
+    sprite.setScale(TOKEN_SCALE);
+  }
+
+  private inspectNearest() {
+    let nearest: Phaser.GameObjects.Sprite | null = null;
+    let best = Number.POSITIVE_INFINITY;
+    for (const sprite of this.tokens.values()) {
+      const distance = Phaser.Math.Distance.Between(
+        this.player.x,
+        this.player.y,
+        sprite.x,
+        sprite.y,
+      );
+      if (distance < best) {
+        best = distance;
+        nearest = sprite;
+      }
     }
-    this.bridge().onInspect(null);
+    if (!nearest) return;
+    const token = nearest.getData("token") as HaystackToken;
+    this.selectInspect(token, nearest);
+  }
+
+  private claimInspected() {
+    if (!this.inspectedId) return;
+    const sprite = this.tokens.get(this.inspectedId);
+    if (!sprite) return;
+    this.claim(sprite.getData("token") as HaystackToken, sprite);
   }
 
   private claim(token: HaystackToken, sprite: Phaser.GameObjects.Sprite) {
@@ -232,6 +287,11 @@ export class OfficeScene extends Phaser.Scene {
       yoyo: true,
       repeat: 5,
       onComplete: () => {
+        if (this.inspectedId === tokenId) {
+          sprite.setTint(0xfff1b8);
+          sprite.setScale(TOKEN_SCALE * 1.25);
+          return;
+        }
         sprite.clearTint();
         sprite.setScale(TOKEN_SCALE);
       },
@@ -253,6 +313,22 @@ export class OfficeScene extends Phaser.Scene {
       body.setVelocity(vx * speed * inv, vy * speed * inv);
     } else {
       body.setVelocity(vx * speed, vy * speed);
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.inspectKey) ||
+      Phaser.Input.Keyboard.JustDown(this.inspectAltKey)
+    ) {
+      this.inspectNearest();
+    }
+    if (
+      Phaser.Input.Keyboard.JustDown(this.enterKey) ||
+      Phaser.Input.Keyboard.JustDown(this.spaceKey)
+    ) {
+      if (this.inspectedId) {
+        this.claimInspected();
+      } else {
+        this.inspectNearest();
+      }
     }
 
     this.playerLight.x = this.player.x;
