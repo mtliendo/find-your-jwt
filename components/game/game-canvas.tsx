@@ -22,7 +22,9 @@ export default function GameCanvas({
   const gameRef = useRef<Phaser.Game | null>(null);
   const handlersRef = useRef({ onInspect, onClaim, tokens });
 
-  handlersRef.current = { onInspect, onClaim, tokens };
+  useEffect(() => {
+    handlersRef.current = { onInspect, onClaim, tokens };
+  }, [onInspect, onClaim, tokens]);
 
   useEffect(() => {
     const parent = parentRef.current;

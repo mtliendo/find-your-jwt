@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 
 function gfx(scene: Phaser.Scene) {
-  return scene.make.graphics({ x: 0, y: 0, add: false });
+  return scene.make.graphics({ x: 0, y: 0 }, false);
 }
 
 export function generateOfficeTextures(scene: Phaser.Scene) {

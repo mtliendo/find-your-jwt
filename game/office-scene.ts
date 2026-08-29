@@ -20,6 +20,8 @@ type DirectionKeys = {
   right: Phaser.Input.Keyboard.Key;
 };
 
+const TOKEN_SCALE = 1.7;
+
 export class OfficeScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -158,7 +160,7 @@ export class OfficeScene extends Phaser.Scene {
         .sprite(token.x, token.y, "jwt")
         .setPipeline("Light2D")
         .setDepth(6)
-        .setScale(1.7)
+        .setScale(TOKEN_SCALE)
         .setData("token", token)
         .setInteractive(
           new Phaser.Geom.Rectangle(-10, -10, 42, 34),
@@ -193,7 +195,7 @@ export class OfficeScene extends Phaser.Scene {
   private inspect(token: HaystackToken, sprite: Phaser.GameObjects.Sprite) {
     this.inspectedId = token.id;
     sprite.setTint(0xfff1b8);
-    sprite.setScale(1.25);
+    sprite.setScale(TOKEN_SCALE * 1.25);
     this.bridge().onInspect({ token, decoded: decodeJwt(token.raw) });
   }
 
@@ -203,7 +205,7 @@ export class OfficeScene extends Phaser.Scene {
     const sprite = this.tokens.get(id);
     if (sprite && this.time.now >= this.failUntil) {
       sprite.clearTint();
-      sprite.setScale(1);
+      sprite.setScale(TOKEN_SCALE);
     }
     this.bridge().onInspect(null);
   }
@@ -211,7 +213,7 @@ export class OfficeScene extends Phaser.Scene {
   private claim(token: HaystackToken, sprite: Phaser.GameObjects.Sprite) {
     this.tweens.add({
       targets: sprite,
-      scale: 1.35,
+      scale: TOKEN_SCALE * 1.35,
       duration: 80,
       yoyo: true,
     });
@@ -231,7 +233,7 @@ export class OfficeScene extends Phaser.Scene {
       repeat: 5,
       onComplete: () => {
         sprite.clearTint();
-        sprite.setScale(1);
+        sprite.setScale(TOKEN_SCALE);
       },
     });
   }
