@@ -12,9 +12,9 @@ Anyone can decode a JWT. That is not identity.
 
 1. You sign in with Auth0. The session ID token is real.
 2. You spawn in a 2D office with ~100 JWT chips that all look the same.
-3. One chip is **your** Auth0 ID token (match on `sub`). The rest are decoys: plausible JWT-shaped strings with other subjects, some expired, some wrong `aud`, some unsigned garbage that still decodes as JSON.
-4. Hover with the magnifying glass to decode header + payload (jwt.io-style). Decode is free.
-5. Click to claim. You win only if that token's `sub` is the signed-in user. The win screen can also show Auth0 JWKS signature verification — that is what makes the token actually yours.
+3. One chip is **your** Auth0 ID token. The rest are Auth0-shaped decoys (typical ID-token claims, RS256-length signatures) with other subjects — some expired, some wrong `aud`, some unsigned / `alg: none` that still decode as JSON.
+4. Tap a chip to decode header + payload (jwt.io-style). Decode is free.
+5. Claim is a second action. You win only if Auth0 JWKS verifies the signature **and** `sub` is the signed-in user. Payload-only / unsigned / `alg: none` is a miss.
 6. Wrong claim: short fail, keep hunting.
 
 ## Stack

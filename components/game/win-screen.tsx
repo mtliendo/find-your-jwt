@@ -24,8 +24,8 @@ export function WinScreen({
           <CardTitle className="mt-3 text-3xl">That one was yours.</CardTitle>
           <CardDescription>
             You did not win by decoding. Every token in the room could be
-            decoded. You won because the <code>sub</code> matched the signed-in
-            user.
+            decoded. You won because Auth0 JWKS verified the signature and the{" "}
+            <code>sub</code> is you.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -47,11 +47,7 @@ export function WinScreen({
           </dl>
           <p className="text-sm leading-6 text-stone-300">{result.verifyNote}</p>
           <div className="flex items-center justify-between gap-3">
-            <Badge variant={result.signatureVerified ? "teal" : "outline"}>
-              {result.signatureVerified
-                ? "JWKS signature verified"
-                : "Signature not verified"}
-            </Badge>
+            <Badge variant="teal">JWKS signature verified</Badge>
             <Button variant="amber" onClick={onReplay}>
               Hunt again
             </Button>

@@ -17,6 +17,9 @@ export default async function Home() {
     return <MissingIdToken player={session.player} />;
   }
 
-  const tokens = buildHaystack(session.idToken);
+  const tokens = buildHaystack(session.idToken, {
+    email: session.player.email,
+    name: session.player.name,
+  });
   return <GameShell player={session.player} initialTokens={tokens} />;
 }

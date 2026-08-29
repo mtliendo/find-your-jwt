@@ -3,63 +3,70 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { decodeJwt, readClaim } from "@/lib/jwt";
 import type { ClaimResult } from "@/lib/game-types";
 
+const MISS: ClaimResult = {
+  ok: false,
+  reason: "Wrong token. Keep hunting.",
+};
+
 function issuerFromDomain(domain: string) {
   const trimmed = domain.replace(/\/$/, "");
   return trimmed.startsWith("https://") ? `${trimmed}/` : `https://${trimmed}/`;
+}
+
+function miss(sub?: string): ClaimResult {
+  return sub ? { ...MISS, sub } : { ...MISS };
+}
+
+function headerAlg(raw: string) {
+  const decoded = decodeJwt(raw);
+  const alg = decoded.header?.alg;
+  return typeof alg === "string" ? alg : "";
 }
 
 export async function verifyOwnedToken(
   raw: string,
   expectedSub: string,
 ): Promise<ClaimResult> {
-  const decoded = decodeJwt(raw);
-  const claimedSub = readClaim(decoded.payload, "sub");
-
-  if (!claimedSub) {
-    return {
-      ok: false,
-      reason: "That token has no `sub`. Decode is free. Identity is not.",
-    };
+  const parts = raw.split(".");
+  if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
+    return miss(readClaim(decodeJwt(raw).payload, "sub"));
   }
 
-  if (claimedSub !== expectedSub) {
-    return {
-      ok: false,
-      reason: "Wrong token. That `sub` is not you. Keep hunting.",
-      sub: claimedSub,
-    };
+  const alg = headerAlg(raw);
+  if (!alg || alg.toLowerCase() === "none") {
+    return miss(readClaim(decodeJwt(raw).payload, "sub"));
   }
 
   const domain = process.env.AUTH0_DOMAIN;
   const clientId = process.env.AUTH0_CLIENT_ID;
-  let signatureVerified = false;
-  let verifyNote =
-    "The `sub` matches you. Signature check was skipped (Auth0 domain missing).";
-
-  if (domain && clientId) {
-    try {
-      const JWKS = createRemoteJWKSet(
-        new URL(`https://${domain.replace(/^https?:\/\//, "")}/.well-known/jwks.json`),
-      );
-      await jwtVerify(raw, JWKS, {
-        issuer: issuerFromDomain(domain),
-        audience: clientId,
-      });
-      signatureVerified = true;
-      verifyNote =
-        "Auth0 JWKS verified the signature. Decode showed the claims; the signature is what makes this token actually yours.";
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "verify failed";
-      verifyNote = `The \`sub\` matches, but JWKS verification failed: ${message}`;
-    }
+  if (!domain || !clientId) {
+    return miss();
   }
 
-  return {
-    ok: true,
-    sub: claimedSub,
-    email: readClaim(decoded.payload, "email"),
-    iss: readClaim(decoded.payload, "iss"),
-    signatureVerified,
-    verifyNote,
-  };
+  try {
+    const host = domain.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    const JWKS = createRemoteJWKSet(
+      new URL(`https://${host}/.well-known/jwks.json`),
+    );
+    const { payload } = await jwtVerify(raw, JWKS, {
+      issuer: issuerFromDomain(host),
+      audience: clientId,
+    });
+    const verifiedSub = typeof payload.sub === "string" ? payload.sub : undefined;
+    if (!verifiedSub || verifiedSub !== expectedSub) {
+      return miss(verifiedSub);
+    }
+
+    return {
+      ok: true,
+      sub: verifiedSub,
+      email: typeof payload.email === "string" ? payload.email : undefined,
+      iss: typeof payload.iss === "string" ? payload.iss : undefined,
+      signatureVerified: true,
+      verifyNote:
+        "Auth0 JWKS verified the signature. Decode showed the claims; the signature is what makes this token actually yours.",
+    };
+  } catch {
+    return miss(readClaim(decodeJwt(raw).payload, "sub"));
+  }
 }
