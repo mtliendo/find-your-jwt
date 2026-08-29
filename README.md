@@ -36,6 +36,8 @@ pnpm dev
 
 Open [http://localhost:3000](http://localhost:3000). You must sign in to play. There is no guest mode.
 
+Without Auth0 env vars the login wall still renders. Login itself needs the Regular Web App values below.
+
 ```bash
 pnpm build
 ```
