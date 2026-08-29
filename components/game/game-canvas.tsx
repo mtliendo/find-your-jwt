@@ -7,6 +7,7 @@ import type { OfficeScene } from "@/game/office-scene";
 
 type GameCanvasProps = {
   tokens: HaystackToken[];
+  move: { x: number; y: number };
   onInspect: GameBridge["onInspect"];
   onClaim: GameBridge["onClaim"];
   failTokenId: string | null;
@@ -14,17 +15,18 @@ type GameCanvasProps = {
 
 export default function GameCanvas({
   tokens,
+  move,
   onInspect,
   onClaim,
   failTokenId,
 }: GameCanvasProps) {
   const parentRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
-  const handlersRef = useRef({ onInspect, onClaim, tokens });
+  const handlersRef = useRef({ onInspect, onClaim, tokens, move });
 
   useEffect(() => {
-    handlersRef.current = { onInspect, onClaim, tokens };
-  }, [onInspect, onClaim, tokens]);
+    handlersRef.current = { onInspect, onClaim, tokens, move };
+  }, [onInspect, onClaim, tokens, move]);
 
   useEffect(() => {
     const parent = parentRef.current;
@@ -38,6 +40,9 @@ export default function GameCanvas({
       const bridge: GameBridge = {
         get tokens() {
           return handlersRef.current.tokens;
+        },
+        get move() {
+          return handlersRef.current.move;
         },
         onInspect: (value) => handlersRef.current.onInspect(value),
         onClaim: (token) => handlersRef.current.onClaim(token),
@@ -64,7 +69,7 @@ export default function GameCanvas({
   return (
     <div
       ref={parentRef}
-      className="game-canvas h-[min(64vh,640px)] w-full overflow-hidden rounded-xl border border-amber-200/10 bg-stone-950"
+      className="game-canvas relative h-[min(70vh,640px)] w-full overflow-hidden rounded-xl border border-amber-200/10 bg-stone-950"
     />
   );
 }
