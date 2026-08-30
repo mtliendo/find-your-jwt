@@ -1,7 +1,7 @@
 import "server-only";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { decodeJwt, readClaim } from "@/lib/jwt";
-import type { ClaimResult } from "@/lib/game-types";
+import type { ClaimResult, PlayMode } from "@/lib/game-types";
 
 const MISS: ClaimResult = {
   ok: false,
@@ -26,7 +26,25 @@ function headerAlg(raw: string) {
 export async function verifyOwnedToken(
   raw: string,
   expectedSub: string,
+  mode: PlayMode = "auth0",
 ): Promise<ClaimResult> {
+  if (mode === "guest") {
+    const decoded = decodeJwt(raw);
+    const claimedSub = readClaim(decoded.payload, "sub");
+    if (claimedSub && claimedSub === expectedSub) {
+      return {
+        ok: true,
+        sub: claimedSub,
+        email: readClaim(decoded.payload, "email"),
+        iss: readClaim(decoded.payload, "iss"),
+        signatureVerified: false,
+        verifyNote:
+          "Guest play: you found the token whose sub is yours. Auth0 JWKS is the gate when a real session is signed in.",
+      };
+    }
+    return miss(claimedSub);
+  }
+
   const parts = raw.split(".");
   if (parts.length !== 3 || !parts[0] || !parts[1] || !parts[2]) {
     return miss(readClaim(decodeJwt(raw).payload, "sub"));

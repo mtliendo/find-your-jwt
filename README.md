@@ -1,27 +1,35 @@
 # Find Your JWT
 
-A Focus Otter browser game. Sign in with Auth0, walk a dim office, and find **your** JWT in a pile of lookalikes.
+A Focus Otter browser game. Walk a dim office and find **your** JWT in a pile of lookalikes.
 
 Inspired by Nas Nakarus's needle-in-a-haystack game. Luigi's Mansion energy, 2D, Phaser — not a 3D mansion and not a conference talk.
 
-**Focus Otter first** ([@focusotter](https://x.com/focusotter)). Auth0 is the employer and the login.
+**Focus Otter first** ([@focusotter](https://x.com/focusotter)). Auth0 is the employer and the optional login.
+
+## Guest play (default)
+
+`pnpm dev` with no `.env.local` loads the office immediately. No Auth0 redirect.
+
+A local guest identity (`sub` + email) is minted and that token is the needle. Claim wins on **sub match** of the guest token. JWKS cannot verify a local guest token.
+
+When Auth0 env is fully set and you sign in, the needle is your real ID token and the win gate is **JWKS verify AND sub match**.
 
 ## What it teaches
 
 Anyone can decode a JWT. That is not identity.
 
-1. You sign in with Auth0. The session ID token is real.
-2. You spawn in a 2D office with ~100 JWT chips that all look the same.
-3. One chip is **your** Auth0 ID token. The rest are Auth0-shaped decoys (typical ID-token claims, RS256-length signatures) with other subjects — some expired, some wrong `aud`, some unsigned / `alg: none` that still decode as JSON.
-4. Tap a chip to decode header + payload (jwt.io-style). Decode is free.
-5. Claim is a second action. You win only if Auth0 JWKS verifies the signature **and** `sub` is the signed-in user. Payload-only / unsigned / `alg: none` is a miss.
+1. You spawn in a 2D office with ~100 JWT chips that all look the same.
+2. One chip is yours (guest token, or your Auth0 ID token when signed in). The rest are Auth0-shaped decoys.
+3. First tap inspects and keeps the decode HUD. Decode is free.
+4. Claim is a second action (HUD button, second tap, or Enter / Space).
+5. Guest win: `sub` match. Auth0 win: JWKS signature + `sub` match.
 6. Wrong claim: short fail, keep hunting.
 
 ## Stack
 
 - Next.js App Router + TypeScript + pnpm
 - Phaser 3 (client-only; never SSR'd)
-- `@auth0/nextjs-auth0` v4
+- `@auth0/nextjs-auth0` v4 (kept in the repo; optional)
 - shadcn-style / Tailwind chrome around the canvas
 - Vercel-ready
 
@@ -29,22 +37,18 @@ Anyone can decode a JWT. That is not identity.
 
 ```bash
 pnpm install
-cp .env.example .env.local
-# fill in Auth0 values
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). You must sign in to play. There is no guest mode.
-
-Without Auth0 env vars the login wall still renders. Login itself needs the Regular Web App values below.
+Open [http://localhost:3000](http://localhost:3000). The game is playable with zero Auth0 env.
 
 ```bash
 pnpm build
 ```
 
-## Auth0 app setup
+## Auth0 app setup (optional)
 
-Create a **Regular Web Application** in the [Auth0 Dashboard](https://manage.auth0.com).
+Create a **Regular Web Application** in the [Auth0 Dashboard](https://manage.auth0.com) if you want the signed-in needle.
 
 | Setting | Local value |
 | --- | --- |
@@ -69,9 +73,7 @@ Generate `AUTH0_SECRET` with:
 openssl rand -hex 32
 ```
 
-On Vercel, set the same variables. You can omit `APP_BASE_URL` on preview deploys so the SDK infers the host; add each preview callback/logout/web origin (or a wildcard pattern your tenant allows) in the Auth0 app.
-
-The SDK mounts `/auth/login`, `/auth/callback`, `/auth/logout`, and `/auth/profile` via `proxy.ts`.
+The SDK still mounts `/auth/login`, `/auth/callback`, `/auth/logout`, and `/auth/profile` via `proxy.ts` when those env vars are set.
 
 ## Phaser + Next.js
 
@@ -79,5 +81,8 @@ Phaser needs `window`. This app loads the game with `next/dynamic(..., { ssr: fa
 
 ## Controls
 
-- **WASD** or arrow keys — walk
-- **Mouse** — magnifying glass; hover to decode; click to claim
+- **WASD** or arrow keys — walk (desktop)
+- **On-screen pad** — walk (phone)
+- **First tap** — inspect (sticky decode HUD)
+- **Second tap** or **Claim this token** — claim
+- **Enter / Space** — claim the inspected chip (or inspect nearest)

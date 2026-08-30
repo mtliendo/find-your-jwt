@@ -7,6 +7,8 @@ export type HaystackToken = {
   y: number;
 };
 
+export type PlayMode = "guest" | "auth0";
+
 export type PlayerProfile = {
   sub: string;
   email?: string;
@@ -35,6 +37,7 @@ export type InspectedToken = {
 
 export type GameBridge = {
   tokens: HaystackToken[];
+  move: { x: number; y: number };
   onInspect: (inspected: InspectedToken | null) => void;
   onClaim: (token: HaystackToken) => void;
 };

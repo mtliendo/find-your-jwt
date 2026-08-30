@@ -24,18 +24,18 @@ const TOKEN_SCALE = 1.7;
 
 export class OfficeScene extends Phaser.Scene {
   private player!: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasd!: DirectionKeys;
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
+  private wasd?: DirectionKeys;
   private playerLight!: Phaser.GameObjects.Light;
   private pointerLight!: Phaser.GameObjects.Light;
   private magGlass!: Phaser.GameObjects.Container;
   private tokens = new Map<string, Phaser.GameObjects.Sprite>();
   private inspectedId: string | null = null;
   private failUntil = 0;
-  private inspectKey!: Phaser.Input.Keyboard.Key;
-  private inspectAltKey!: Phaser.Input.Keyboard.Key;
-  private enterKey!: Phaser.Input.Keyboard.Key;
-  private spaceKey!: Phaser.Input.Keyboard.Key;
+  private inspectKey?: Phaser.Input.Keyboard.Key;
+  private inspectAltKey?: Phaser.Input.Keyboard.Key;
+  private enterKey?: Phaser.Input.Keyboard.Key;
+  private spaceKey?: Phaser.Input.Keyboard.Key;
 
   constructor() {
     super({ key: "OfficeScene" });
@@ -140,34 +140,37 @@ export class OfficeScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#070605");
     this.cameras.main.setZoom(1);
 
-    if (!this.input.keyboard) {
-      throw new Error("Keyboard plugin missing.");
+    if (this.input.keyboard) {
+      this.cursors = this.input.keyboard.createCursorKeys();
+      this.wasd = this.input.keyboard.addKeys({
+        up: "W",
+        down: "S",
+        left: "A",
+        right: "D",
+      }) as DirectionKeys;
+      this.inspectKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.E,
+      );
+      this.inspectAltKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.I,
+      );
+      this.enterKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.ENTER,
+      );
+      this.spaceKey = this.input.keyboard.addKey(
+        Phaser.Input.Keyboard.KeyCodes.SPACE,
+      );
+      this.input.keyboard.addCapture([
+        Phaser.Input.Keyboard.KeyCodes.SPACE,
+        Phaser.Input.Keyboard.KeyCodes.ENTER,
+      ]);
     }
-    this.cursors = this.input.keyboard.createCursorKeys();
-    this.wasd = this.input.keyboard.addKeys({
-      up: "W",
-      down: "S",
-      left: "A",
-      right: "D",
-    }) as DirectionKeys;
-    this.inspectKey = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.E,
-    );
-    this.inspectAltKey = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.I,
-    );
-    this.enterKey = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.ENTER,
-    );
-    this.spaceKey = this.input.keyboard.addKey(
-      Phaser.Input.Keyboard.KeyCodes.SPACE,
-    );
-    this.input.keyboard.addCapture([
-      Phaser.Input.Keyboard.KeyCodes.SPACE,
-      Phaser.Input.Keyboard.KeyCodes.ENTER,
-    ]);
 
-    this.input.setDefaultCursor("none");
+    if (this.sys.game.device.input.touch) {
+      this.input.setDefaultCursor("default");
+    } else {
+      this.input.setDefaultCursor("none");
+    }
   }
 
   private bridge(): GameBridge {
@@ -183,7 +186,7 @@ export class OfficeScene extends Phaser.Scene {
         .setScale(TOKEN_SCALE)
         .setData("token", token)
         .setInteractive(
-          new Phaser.Geom.Rectangle(-10, -10, 42, 34),
+          new Phaser.Geom.Rectangle(-18, -18, 58, 50),
           Phaser.Geom.Rectangle.Contains,
         );
 
@@ -302,10 +305,13 @@ export class OfficeScene extends Phaser.Scene {
     const speed = 180;
     let vx = 0;
     let vy = 0;
-    if (this.cursors.left.isDown || this.wasd.left.isDown) vx -= 1;
-    if (this.cursors.right.isDown || this.wasd.right.isDown) vx += 1;
-    if (this.cursors.up.isDown || this.wasd.up.isDown) vy -= 1;
-    if (this.cursors.down.isDown || this.wasd.down.isDown) vy += 1;
+    const pad = this.bridge().move ?? { x: 0, y: 0 };
+    if (this.cursors?.left.isDown || this.wasd?.left.isDown || pad.x < 0) vx -= 1;
+    if (this.cursors?.right.isDown || this.wasd?.right.isDown || pad.x > 0) {
+      vx += 1;
+    }
+    if (this.cursors?.up.isDown || this.wasd?.up.isDown || pad.y < 0) vy -= 1;
+    if (this.cursors?.down.isDown || this.wasd?.down.isDown || pad.y > 0) vy += 1;
 
     const body = this.player.body;
     if (vx !== 0 && vy !== 0) {
@@ -315,14 +321,15 @@ export class OfficeScene extends Phaser.Scene {
       body.setVelocity(vx * speed, vy * speed);
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.inspectKey) ||
-      Phaser.Input.Keyboard.JustDown(this.inspectAltKey)
+    if (
+      (this.inspectKey && Phaser.Input.Keyboard.JustDown(this.inspectKey)) ||
+      (this.inspectAltKey && Phaser.Input.Keyboard.JustDown(this.inspectAltKey))
     ) {
       this.inspectNearest();
     }
     if (
-      Phaser.Input.Keyboard.JustDown(this.enterKey) ||
-      Phaser.Input.Keyboard.JustDown(this.spaceKey)
+      (this.enterKey && Phaser.Input.Keyboard.JustDown(this.enterKey)) ||
+      (this.spaceKey && Phaser.Input.Keyboard.JustDown(this.spaceKey))
     ) {
       if (this.inspectedId) {
         this.claimInspected();

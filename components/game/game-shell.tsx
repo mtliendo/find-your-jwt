@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useState } from "react";
 import { claimTokenAction } from "@/app/actions";
 import { DecodePanel } from "@/components/game/decode-panel";
+import { TouchPad } from "@/components/game/touch-pad";
 import { WinScreen } from "@/components/game/win-screen";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import type {
   ClaimResult,
   HaystackToken,
   InspectedToken,
+  PlayMode,
   PlayerProfile,
 } from "@/lib/game-types";
 import { cn } from "@/lib/utils";
@@ -28,9 +30,13 @@ const GameCanvas = dynamic(() => import("@/components/game/game-canvas"), {
 export function GameShell({
   player,
   initialTokens,
+  mode,
+  auth0Configured,
 }: {
   player: PlayerProfile;
   initialTokens: HaystackToken[];
+  mode: PlayMode;
+  auth0Configured: boolean;
 }) {
   const [tokens, setTokens] = useState(initialTokens);
   const [inspected, setInspected] = useState<InspectedToken | null>(null);
@@ -41,6 +47,7 @@ export function GameShell({
   );
   const [canvasKey, setCanvasKey] = useState(0);
   const [claiming, setClaiming] = useState(false);
+  const [move, setMove] = useState({ x: 0, y: 0 });
 
   const onInspect = useCallback((value: InspectedToken | null) => {
     setInspected(value);
@@ -87,28 +94,37 @@ export function GameShell({
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <Badge variant="outline">{player.email ?? player.sub}</Badge>
-          <a href="/auth/logout" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
-            Log out
-          </a>
+          <Badge variant={mode === "guest" ? "amber" : "outline"}>
+            {mode === "guest" ? "Guest" : (player.email ?? player.sub)}
+          </Badge>
+          {mode === "auth0" ? (
+            <a href="/auth/logout" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+              Log out
+            </a>
+          ) : auth0Configured ? (
+            <a href="/auth/login" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+              Sign in with Auth0
+            </a>
+          ) : null}
         </div>
       </header>
 
       <p className="text-sm text-stone-300">
-        WASD or arrows to walk. Tap a chip to decode (stays selected). Claim
-        with the HUD button, a second tap, or Enter / Space. E inspects the
-        nearest chip. Decode is free — identity is the{" "}
-        <code className="text-amber-200">sub</code>.
+        Walk with WASD, arrows, or the on-screen pad. First tap inspects and
+        stays selected. Claim with the HUD button or a second tap. Decode is
+        free — identity is the <code className="text-amber-200">sub</code>.
       </p>
 
       <div className="relative">
         <GameCanvas
           key={canvasKey}
           tokens={tokens}
+          move={move}
           onInspect={onInspect}
           onClaim={onClaim}
           failTokenId={failTokenId}
         />
+        <TouchPad onMove={setMove} />
         {win ? <WinScreen result={win} onReplay={replay} /> : null}
       </div>
 

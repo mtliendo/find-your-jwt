@@ -24,8 +24,10 @@ export function WinScreen({
           <CardTitle className="mt-3 text-3xl">That one was yours.</CardTitle>
           <CardDescription>
             You did not win by decoding. Every token in the room could be
-            decoded. You won because Auth0 JWKS verified the signature and the{" "}
-            <code>sub</code> is you.
+            decoded.{" "}
+            {result.signatureVerified
+              ? "You won because Auth0 JWKS verified the signature and the sub is you."
+              : "Guest play: you won because this token’s sub is yours."}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
@@ -47,7 +49,11 @@ export function WinScreen({
           </dl>
           <p className="text-sm leading-6 text-stone-300">{result.verifyNote}</p>
           <div className="flex items-center justify-between gap-3">
-            <Badge variant="teal">JWKS signature verified</Badge>
+            <Badge variant={result.signatureVerified ? "teal" : "amber"}>
+              {result.signatureVerified
+                ? "JWKS signature verified"
+                : "Guest sub match"}
+            </Badge>
             <Button variant="amber" onClick={onReplay}>
               Hunt again
             </Button>
